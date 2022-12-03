@@ -159,12 +159,15 @@ def calc_stats(rows, dogs, groups):
                         # Use 100 or 0 for Q or NQ to report average result in percent
                         if col == "Q Rate":
                             value = 100 if row["Result"] == "Q" else 0
-                            row["Q Rate"] = value
+                            # save the Q or NQ as a value of 0 or 10 for sane plotting
+                            row["Q Rate"] = value / 10 
                         else:
                             value = float(row[col]) if row[col] else 0
                         # append this value to the running list of values for this class
                         history.append(value)
+                        # compute average of *all* values up to this point
                         row["Avg " + col] = str(round(statistics.mean(history),2))
+                        # compute average of last 15 values
                         row["Avg15 " + col] = str(round(statistics.mean(history[-15:]),2))
                     else:
                         # No stats for NQ rows (except Q-Rate)
@@ -254,26 +257,22 @@ def write_svg_plot(w, svg, col):
     w.write(svg)
     w.write('</div>')
 
-# Create a plot (x-y graph) of the base columnand its computed stats columns
+# Create a plot (x-y graph) of the base column and its computed stats columns
 # Uses the date as the x-axis, groups in months
-# plot ois converted to SVG and returned as a large python string
+# plot is converted to SVG and returned as a large python string
 def plot_as_svg(table_rows, base_col):
     # create a list of columns to plott together
     plot_cols = [base_col, "Avg "+base_col, "Avg15 "+base_col ]
-
-    # Do not plot the Q-rate itself, only the averages
-    if base_col == "Q Rate":
-        plot_cols = plot_cols[1:] 
 
     # create a blank plot to start with
     plt.close('all')
     fig, ax = plt.subplots()
     # set size
     fig.set_figheight(5)
-    fig.set_figwidth(15)
+    fig.set_figwidth(18)
 
-    # set max value for Y-axis based on type of data
-    # Note: this get auto-adjusted higher if the data exceeds this limit
+    # set default max value for Y-axis based on type of data
+    # Note: this will be auto-adjusted higher if the data exceeds this limit
     if base_col in ("Q Rate", "Score"):
         y_max=100
     elif base_col in ("YPS"):
@@ -281,17 +280,17 @@ def plot_as_svg(table_rows, base_col):
     else: # ("MACH Pts", "T2B Pts"):
         y_max = 10
         
-    # plot y vs x (value vs date) for each column
+    # plot y (value) vs x (date) for each column
     for col in plot_cols:
         xdata = []
         ydata = []
         for row in table_rows:
-            if row[col]:
+            if row[col] or (col == "Q Rate"):
                 x = datetime.datetime.strptime(row["Date"], "%m/%d/%Y")
                 y  = float(row[col]) if row[col] else 0
                 # do we need to adjust the max y value of the plot?
                 if y > y_max:
-                    # round up to extt multiple of 5
+                    # round up to next multiple of 5
                     if (y/5) == int(y/5):
                         y_max = y
                     else:
@@ -300,6 +299,9 @@ def plot_as_svg(table_rows, base_col):
                 ydata.append(y)
         plt.plot(xdata,ydata,'o-')
     # add legend to Y values
+    # first change the base "Q Rate" to a better name
+    if base_col == "Q Rate":
+        plot_cols[0] = "Q / NQ"
     ax.legend( plot_cols )
     # format X-axis to show the dates correctly with ticks at each month
     ax.xaxis.set_major_locator(mdates.MonthLocator())
