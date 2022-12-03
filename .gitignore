@@ -1,0 +1,21 @@
+
+#ignore windows links
+*.lnk
+*.url
+
+#ignore results files
+*.csv
+
+#ignore report files
+*.htm
+*.html
+*.css
+*.svg
+
+#ignore Excel files
+*.xls
+*.xlsx
+
+#ignore archves
+*.zip
+*.7z
