@@ -188,7 +188,7 @@ def html_header(w):
     w.write('<head>\n')
     w.write('  <style>\n')
     w.write('    body {font-family: Arial, Helvetica, sans-serif;}\n')   
-    w.write('    table, th, td {border: 1px solid # ddd;}\n')
+    w.write('    table, th, td {border: 1px solid #ddd;}\n')
     w.write('    table {border-collapse: collapse;}\n')
     w.write('    th, td {padding: 0px 5px; text-align: left;}\n')
     w.write('    th {font-weight: bold; text-decoration: underline;}\n')
