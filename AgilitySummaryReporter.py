@@ -27,10 +27,10 @@ csv_cols = ["Date","Trial","Location","Dog","Handler","Class","Judge","Yards","S
 
 # List of columns to include for for each table that is output
 table_cols = {
-    "Master Std":   ["Date","Trial","Location","Judge","Yards","SCT","Time","YPS","Avg YPS","Avg15 YPS","Faults","Score","Avg Score","Avg15 Score","Result","Avg Q Rate","Avg15 Q Rate","Place","MACH Pts","Avg MACH Pts","Avg15 MACH Pts"],
-    "Master JWW":   ["Date","Trial","Location","Judge","Yards","SCT","Time","YPS","Avg YPS","Avg15 YPS","Faults","Score","Avg Score","Avg15 Score","Result","Avg Q Rate","Avg15 Q Rate","Place","MACH Pts","Avg MACH Pts","Avg15 MACH Pts"],
-    "Prem Std":     ["Date","Trial","Location","Judge","Faults","Score","Result","Avg Q Rate","Avg15 Q Rate","Place","Top25"],
-    "Prem JWW":     ["Date","Trial","Location","Judge","Faults","Score","Result","Avg Q Rate","Avg15 Q Rate","Place","Top25"],
+    "Master Std":   ["Date","Trial","Location","Judge","Yards","SCT","Time","YPS","Avg YPS","Avg15 YPS","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","MACH Pts","Avg MACH Pts","Avg15 MACH Pts"],
+    "Master JWW":   ["Date","Trial","Location","Judge","Yards","SCT","Time","YPS","Avg YPS","Avg15 YPS","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","MACH Pts","Avg MACH Pts","Avg15 MACH Pts"],
+    "Prem Std":     ["Date","Trial","Location","Judge","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","Top25"],
+    "Prem JWW":     ["Date","Trial","Location","Judge","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","Top25"],
     "Master FAST":  ["Date","Trial","Location","Judge","Faults","Score","Avg Score","Avg15 Score","Result","Avg Q Rate","Avg15 Q Rate","Place"],
     "T2B" :         ["Date","Trial","Location","Judge","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","T2B Pts","Avg T2B Pts","Avg15 T2B Pts"],
     "Other" :       ["Date","Trial","Location","Class","Judge","Yards","SCT","Time","YPS","Avg YPS","Avg15 YPS","Faults","Score","Avg Score","Avg15 Score","Result","Avg Q Rate","Avg15 Q Rate","Place","MACH Pts","Avg MACH Pts","Avg15 MACH Pts","T2B Pts","Avg T2B Pts","Avg15 T2B Pts","Top25"],
@@ -237,7 +237,6 @@ def html_header(w):
     w.write('    .row-q  {color:#000;}\n')
     w.write('    .row-nq {color:#ccc;}\n')
     w.write('    .row-a  {color:#ccc;}\n')
-    
     w.write('    .scroll-x {overflow-x:scroll;}\n')
     w.write('  </style>\n')
     w.write('</head>\n')
@@ -254,7 +253,7 @@ def file_table(meta):
     print('  Source File Table')
     cols = ['Filename','Row Count','File Date','Last Run Date']
     now = datetime.datetime.now().strftime(FORMAT_DATE_TIME)
-    w.write('<p>Report Date: ' + now + '</p>\n')
+    w.write('<p><b>Report Date:</b> ' + now + '</p>\n')
     w.write('<h2>Source Files</h2>\n')
     w.write('<table>\n')
     # table heading
