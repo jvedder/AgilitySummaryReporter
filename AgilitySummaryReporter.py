@@ -227,9 +227,9 @@ def html_header(w):
     w.write('    th {font-weight: bold; text-decoration: underline;}\n')
     for c in col_css:
         w.write('    .'+ col_css_class(c) + ' {min-width:'+ col_css[c][0] +'; text-align:'+ col_css[c][1] +';}\n')
-    w.write('    .row-q  {color:# 000;}\n')
-    w.write('    .row-nq {color:# ccc;}\n')
-    w.write('    .row-a  {color:# ccc;}\n')
+    w.write('    .row-q  {color:#000;}\n')
+    w.write('    .row-nq {color:#ccc;}\n')
+    w.write('    .row-a  {color:#ccc;}\n')
     
     w.write('    .scroll-x {overflow-x:scroll;}\n')
     w.write('  </style>\n')
