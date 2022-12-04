@@ -333,19 +333,15 @@ def plot_as_svg(table_rows, base_col):
 
     # set default max value for Y-axis based on type of data
     # Note: this will be auto-adjusted higher if the data exceeds this limit
-    if base_col in ("Q Rate", "Score"):
-        y_max=100
-    elif base_col in ("YPS"):
-        y_max = 5
-    else: # ("MACH Pts", "T2B Pts"):
-        y_max = 10
+    y_maxes = {"Q Rate":100, "YPS":5, "Score":100, "MACH Pts":10, "T2B Pts":15}
+    y_max = y_maxes[base_col]
         
     # plot y (value) vs x (date) for each column
     for col in plot_cols:
         xdata = []
         ydata = []
         for row in table_rows:
-            if row[col] or (col == "Q Rate"):
+            if col == "Q Rate" or row["Result"] == "Q":
                 x = datetime.datetime.strptime(row["Date"], FORMAT_DATE)
                 y  = float(row[col]) if row[col] else 0
                 # do we need to adjust the max y value of the plot?
