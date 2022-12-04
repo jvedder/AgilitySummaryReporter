@@ -83,6 +83,12 @@ col_css = {
 # TODO: I'm not sure it's necessary
 DEFAULT_DELIMITER = ','
 
+# Global datetime format strings
+# '12/04/2022 02:34 PM'
+FORMAT_DATE_TIME = "%m/%d/%Y %I:%M %p"
+# '12/04/2022'
+FORMAT_DATE = "%m/%d/%Y"
+
 # Reads the master CSV input file
 def read_csv(file):
     row_count = 0
@@ -105,26 +111,26 @@ def read_csv(file):
                     index += 1
                     if c == "Date":
                         # parse the date field into a date object
-                        d = datetime.datetime.strptime(row["Date"], "%m/%d/%Y").date()
+                        d = datetime.datetime.strptime(row["Date"], FORMAT_DATE).date()
                         row["SortDate"] = d
                         if d > last_run_date:
                             last_run_date = d
                 rows.append(row)
                 row_count += 1
     print (row_count, 'lines read.')
-    print ("Last run", last_run_date.strftime("%m/%d/%Y"))
+    print ("Last run", last_run_date.strftime(FORMAT_DATE))
 
     # get the modification date/time of the file
     os_date = os.path.getmtime(file)
     file_date = datetime.datetime.fromtimestamp(os_date)
-    print_date = file_date.strftime("%m/%d/%Y %I:%M %p")
+    print_date = file_date.strftime(FORMAT_DATE_TIME)
     print ("File Date", print_date)
   
     meta = dict()
     meta['Filename'] = file
     meta['Row Count'] = str(row_count)
-    meta['File Date'] = file_date.strftime("%m/%d/%Y %I:%M %p")
-    meta['Last Run Date'] = last_run_date.strftime("%m/%d/%Y")
+    meta['File Date'] = file_date.strftime(FORMAT_DATE_TIME)
+    meta['Last Run Date'] = last_run_date.strftime(FORMAT_DATE)
     meta['rows'] = rows
     return meta
 
@@ -219,6 +225,7 @@ def html_header(w):
     w.write('<!DOCTYPE html>')
     w.write('<html>\n')
     w.write('<head>\n')
+    w.write('<title>Agility Summary Report</title>\n')
     w.write('  <style>\n')
     w.write('    body {font-family: Arial, Helvetica, sans-serif;}\n')   
     w.write('    table, th, td {border: 1px solid #ddd;}\n')
@@ -245,17 +252,19 @@ def html_footer(w):
 # Write a table of file meta data
 def file_table(meta):
     print('  Source File Table')
-    cols = ['Filename','Row Count','File Date','Last Run Date',]
-    # table heading row
+    cols = ['Filename','Row Count','File Date','Last Run Date']
+    now = datetime.datetime.now().strftime(FORMAT_DATE_TIME)
+    w.write('<p>Report Date: ' + now + '</p>\n')
     w.write('<h2>Source Files</h2>\n')
     w.write('<table>\n')
+    # table heading
     w.write('  <thead>\n')
     w.write('  <tr>\n')
     for c in cols:
         w.write('    <th class="' + col_css_class(c) +'" >' + c + '</th>\n')
     w.write('  </tr>\n')
     w.write('  </thead>\n')
-
+    # table body
     w.write('  <tbody>\n')
     w.write('  <tr>\n')
     for c in cols:
@@ -338,7 +347,7 @@ def plot_as_svg(table_rows, base_col):
         ydata = []
         for row in table_rows:
             if row[col] or (col == "Q Rate"):
-                x = datetime.datetime.strptime(row["Date"], "%m/%d/%Y")
+                x = datetime.datetime.strptime(row["Date"], FORMAT_DATE)
                 y  = float(row[col]) if row[col] else 0
                 # do we need to adjust the max y value of the plot?
                 if y > y_max:
