@@ -11,8 +11,10 @@ import statistics
 import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib.dates as mdates
+import time
 import datetime
 import io
+import os
 
 # input & output files to use as parameters
 csv_file    = 'PawPrint Trials Results.csv'
@@ -69,7 +71,12 @@ col_css = {
     "T2B Pts":      ["60px", "center"],
     "Avg T2B Pts":  ["60px", "center"],
     "Avg15 T2B Pts":["60px", "center"],
-    "Top25":        ["46px", "center"]
+    "Top25":        ["46px", "center"],
+
+    'Filename':     ["235px", "left"],
+    'Row Count':    ["100px", "center"],
+    'File Date':    ["200px", "left"],
+    'Last Run Date':["200px", "left"],
 }
 
 # Global default delimiter for CSV reader.
@@ -80,23 +87,46 @@ DEFAULT_DELIMITER = ','
 def read_csv(file):
     row_count = 0
     rows = [ ]
+    last_run_date = datetime.datetime(2020, 1, 1, 0, 0).date()
     print('Reading', file)
     with open(file, newline='', mode='r', encoding='utf-8-sig') as f:
+        # skip the header row
         f.readline( )
+        # read the remainder of the file as CSV rows
         reader = csv.reader(f)
         for r in reader:
             # Reader returns a list of string for each CSV row
-            # Convert CSV row to dict with column names as key
+            # Convert each CSV row to dict with column names as key
             if len(r) > 10:
                 row = dict()
                 index = 0
                 for c in csv_cols:
                     row[c] = r[index]
                     index += 1
+                    if c == "Date":
+                        # parse the date field into a date object
+                        d = datetime.datetime.strptime(row["Date"], "%m/%d/%Y").date()
+                        row["SortDate"] = d
+                        if d > last_run_date:
+                            last_run_date = d
                 rows.append(row)
                 row_count += 1
     print (row_count, 'lines read.')
-    return rows
+    print ("Last run", last_run_date.strftime("%m/%d/%Y"))
+
+    # get the modification date/time of the file
+    os_date = os.path.getmtime(file)
+    file_date = datetime.datetime.fromtimestamp(os_date)
+    print_date = file_date.strftime("%m/%d/%Y %I:%M %p")
+    print ("File Date", print_date)
+  
+    meta = dict()
+    meta['Filename'] = file
+    meta['Row Count'] = str(row_count)
+    meta['File Date'] = file_date.strftime("%m/%d/%Y %I:%M %p")
+    meta['Last Run Date'] = last_run_date.strftime("%m/%d/%Y")
+    meta['rows'] = rows
+    return meta
 
 # Remove absence rows 
 def remove_absences(rows):
@@ -212,6 +242,28 @@ def html_footer(w):
     w.write('</body>\n')
     w.write('</html>\n')
 
+# Write a table of file meta data
+def file_table(meta):
+    print('  Source File Table')
+    cols = ['Filename','Row Count','File Date','Last Run Date',]
+    # table heading row
+    w.write('<h2>Source Files</h2>\n')
+    w.write('<table>\n')
+    w.write('  <thead>\n')
+    w.write('  <tr>\n')
+    for c in cols:
+        w.write('    <th class="' + col_css_class(c) +'" >' + c + '</th>\n')
+    w.write('  </tr>\n')
+    w.write('  </thead>\n')
+
+    w.write('  <tbody>\n')
+    w.write('  <tr>\n')
+    for c in cols:
+        w.write('    <td class="' + col_css_class(c) +'" >' + meta[c] + '</td>\n')
+    w.write('  </tr>\n')
+    w.write('  </tbody>\n')
+    w.write('</table>\n')
+
 # Write a new section start to the HTML output file
 def section_header(w, dog):
     print('  Section:', dog)
@@ -322,7 +374,8 @@ def plot_as_svg(table_rows, base_col):
 # #    
 
 # Read the main CSV file into memory
-rows = read_csv(csv_file)
+file_meta = read_csv(csv_file)
+rows = file_meta['rows']
 
 # clean up data
 remove_absences(rows)
@@ -339,6 +392,7 @@ stat_cols = calc_stats(rows, dogs, groups)
 print('Writing', report_file)
 with open(report_file, 'w') as w:
     html_header(w)
+    file_table(file_meta)
     # each dog gets its own section
     for dog in dogs:
         section_header(w, dog)
@@ -364,7 +418,7 @@ with open(report_file, 'w') as w:
     html_footer(w)
 
 # optionally create the debug file with all data in one giant table
-if True:
+if False:
     print('Writing', debug_file)
     with open(debug_file, 'w') as w:
         html_header(w)
