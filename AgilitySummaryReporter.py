@@ -79,6 +79,10 @@ col_css = {
     'Last Run Date':["200px", "left"],
 }
 
+nac_cutoff_day = 1
+nac_cutoff_month = 12
+
+
 # Global default delimiter for CSV reader.
 # TODO: I'm not sure it's necessary
 DEFAULT_DELIMITER = ','
@@ -210,6 +214,23 @@ def calc_stats(rows, dogs, groups):
                         row["Avg " + col] = ''
                         row["Avg15 " + col] = ''
     return stat_cols
+
+# Calulate the MACH Pts for National Agility Championship (NAC)
+def calc_nac_points(rows, dog, year):
+    nac_groups = ("Master Std", "Master JWW")
+    nac_rows = [row for row in rows if row['Dog']==dog and row['Group'] in nac_groups]
+    # NAC year rund from Dec 1 to Nov 30
+    nac_start_date = datetime.datetime(year-1, 12, 1, 0, 0).date()
+    nac_end_date   = datetime.datetime(year,   11, 30, 0, 0).date()
+    
+    nac_points = 0
+    for row in nac_rows:
+        if nac_start_date <= row['SortDate'] and  row['SortDate'] <= nac_end_date:
+            pts = int(row['MACH Pts']) if row['MACH Pts'] else 0
+            # remove negative MACH points
+            if pts > 0:
+                nac_points += pts
+    return nac_points
 
 # Convert a column name to its CSS class name
 def col_css_class(c):
@@ -418,6 +439,17 @@ with open(report_file, 'w') as w:
                         svg = plot_as_svg(table_rows, col)
                         write_svg_plot(w, svg, col)
                         svg = None # help garbage collect
+        # Table of MACH pts for NAC by year
+        # TODO: Fixed hard-coded years
+        nac_cols = ("Year", "MACH Pts")
+        table_header(w, dog, "MACH Pts for NAC", nac_cols)
+        row = dict()
+        for year in (2021, 2022, 2023):
+            row["Year"] = str(year)
+            row["MACH Pts"] = str(calc_nac_points(rows, dog, year))
+            row["Result"] = "Q"
+            table_row(w, dog, "MACH Pts for NAC", nac_cols, row)
+        table_footer(w)
         section_footer(w)
     html_footer(w)
 
