@@ -219,10 +219,9 @@ def calc_stats(rows, dogs, groups):
 def calc_nac_points(rows, dog, year):
     nac_groups = ("Master Std", "Master JWW")
     nac_rows = [row for row in rows if row['Dog']==dog and row['Group'] in nac_groups]
-    # NAC year rund from Dec 1 to Nov 30
-    nac_start_date = datetime.datetime(year-1, 12, 1, 0, 0).date()
-    nac_end_date   = datetime.datetime(year,   11, 30, 0, 0).date()
-    
+    # NAC year runs from Dec 1 to Nov 30
+    nac_start_date = datetime.datetime(year-2, 12, 1, 0, 0).date()
+    nac_end_date   = datetime.datetime(year-1, 11, 30, 0, 0).date()
     nac_points = 0
     for row in nac_rows:
         if nac_start_date <= row['SortDate'] and  row['SortDate'] <= nac_end_date:
@@ -230,12 +229,17 @@ def calc_nac_points(rows, dog, year):
             # remove negative MACH points
             if pts > 0:
                 nac_points += pts
-    return nac_points
+    nac_row = dict()
+    nac_row["Result"] = "Q"  # Required for Table CSS and filtering
+    nac_row["NAC Year"] = str(year)
+    nac_row["Start Date"] = nac_start_date.strftime(FORMAT_DATE)
+    nac_row["End Date"] = nac_end_date.strftime(FORMAT_DATE)
+    nac_row["MACH Pts"] = str(nac_points)
+    return nac_row
 
 # Convert a column name to its CSS class name
 def col_css_class(c):
     return 'col-' + c.lower().replace(' ','-')
-
 # Convert a row name to its CSS class name
 def row_css_class(r):
     return 'row-' + r.lower().replace(' ','-')
@@ -441,14 +445,11 @@ with open(report_file, 'w') as w:
                         svg = None # help garbage collect
         # Table of MACH pts for NAC by year
         # TODO: Fixed hard-coded years
-        nac_cols = ("Year", "MACH Pts")
-        table_header(w, dog, "MACH Pts for NAC", nac_cols)
-        row = dict()
-        for year in (2021, 2022, 2023):
-            row["Year"] = str(year)
-            row["MACH Pts"] = str(calc_nac_points(rows, dog, year))
-            row["Result"] = "Q"
-            table_row(w, dog, "MACH Pts for NAC", nac_cols, row)
+        nac_cols = ("NAC Year", "Start Date", "End Date", "MACH Pts")
+        table_header(w, dog, "NAC Points", nac_cols)
+        for year in (2022, 2023, 2024, 2025):
+            row = calc_nac_points(rows, dog, year)
+            table_row(w, dog, "NAC Points", nac_cols, row)
         table_footer(w)
         section_footer(w)
     html_footer(w)
