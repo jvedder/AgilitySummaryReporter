@@ -39,10 +39,6 @@ table_cols = {
     "Other" :       ["Date","Trial","Location","Class","Judge","Yards","SCT","Time","YPS","Avg YPS","Avg15 YPS","Faults","Score","Avg Score","Avg15 Score","Result","Avg Q Rate","Avg15 Q Rate","Place","MACH Pts","Avg MACH Pts","Avg15 MACH Pts","T2B Pts","Avg T2B Pts","Avg15 T2B Pts","Top25"],
 }
 
-# List of all colunm names used for dumping the master row table to a debug file
-all_cols = ["Date","Trial","Location","Dog","Handler","Class","Group","Judge","Yards","SCT","Time","YPS","Avg YPS","Avg15 YPS","R","S","W","T","F","E","Score","Avg Score","Avg15 Score","Result","Avg Q Rate","Avg15 Q Rate",
-            "Place","MACH Pts","Avg MACH Pts","Avg15 MACH Pts","T2B Pts","Avg MACH Pts","Avg15 MACH Pts","Top25","Run ID"]
-
 # CSS Properties used and values by column name
 css_prop = ("min-width", "text-align", "background-color")
 col_css = {
@@ -57,20 +53,20 @@ col_css = {
     "Yards":        ["44px", "center"],
     "SCT":          ["32px", "center"],
     "Time":         ["41px", "center"],
-    "YPS":          ["32px", "center", "#a569bd"],
-    "Avg YPS":      ["32px", "center", "#d693f0"],
-    "Avg15 YPS":    ["32px", "center", "#EBDEF0"],
+    "YPS":          ["32px", "center", "#a569bd"], #dark purple
+    "Avg YPS":      ["32px", "center", "#d693f0"], #mid purple
+    "Avg15 YPS":    ["32px", "center", "#EBDEF0"], #light purple
     "Faults":       ["80px", "left"],
     "Score":        ["45px", "center"],
     "Avg Score":    ["45px", "center"],
     "Avg15 Score":  ["45px", "center"],
     "Result":       ["45px", "center"],
-    "Avg Q Rate":   ["45px", "center", "#58D68d"],
-    "Avg15 Q Rate": ["45px", "center", "#AAE9C5"],
+    "Avg Q Rate":   ["45px", "center", "#58D68d"], #dark green
+    "Avg15 Q Rate": ["45px", "center", "#AAE9C5"], #light green
     "Place":        ["45px", "center"],
-    "MACH Pts":     ["77px", "center", "#f0d70b"],
-    "Avg MACH Pts": ["77px", "center" , "#d3c65e"],
-    "Avg15 MACH Pts":["77px", "center", "#f4eec1"],
+    "MACH Pts":     ["77px", "center", "#f0d70b"], #dark yellow
+    "Avg MACH Pts": ["77px", "center" , "#d3c65e"], #mid yellow
+    "Avg15 MACH Pts":["77px", "center", "#f4eec1"], #light yellow
     "T2B Pts":      ["60px", "center"],
     "Avg T2B Pts":  ["60px", "center"],
     "Avg15 T2B Pts":["60px", "center"],
@@ -99,7 +95,7 @@ FORMAT_DATE = "%m/%d/%Y"
 # Reads a CSV input file into a list of dict using the column headings 
 def read_csv(file, csv_cols, source):
     row_count = 0
-    rows = [ ]
+    rows = []
     last_run_date = datetime.datetime(1999, 12, 31, 0, 0).date()
     print('Reading', file)
     with open(file, newline='', mode='r', encoding='utf-8-sig') as f:
@@ -112,6 +108,7 @@ def read_csv(file, csv_cols, source):
             # Convert each CSV row to dict with column names as key
             if len(r) > 5:
                 row = dict()
+                row['Source'] = source
                 index = 0
                 for c in csv_cols:
                     row[c] = r[index]
@@ -143,7 +140,7 @@ def read_csv(file, csv_cols, source):
 
 # Remove absence rows 
 def remove_absences(rows):
-        rows[:] = [r for r in rows if not r["Result"] == 'A']
+        rows[:] = [r for r in rows if not r.get("Result") == 'A']
 
 # Group classes by their common name.
 # For example, [Master Std # 1 8"P] and [Master Std # 2 8"P] are in the same group called [Master Std]
@@ -151,7 +148,7 @@ def group_classes(rows):
     print('Grouping classes')
     groups = ('Master Std','Master JWW','Prem Std','Prem JWW','Master FAST','T2B','Other')
     for row in rows:
-        c = row.get('Class')
+        c = row.get('Class','')
         group = 'Other'
         for g in groups:
             if c.startswith(g):
@@ -164,7 +161,8 @@ def group_dogs(rows):
     print('Grouping Dogs')
     dogs = set()
     for row in rows:
-        dogs.add(row.get('Dog'))
+        if row.get('Dog', False):
+            dogs.add(row.get('Dog'))
     dogs = list(dogs)
     dogs.sort(reverse=True)
     return dogs
@@ -178,8 +176,8 @@ def merge_faults(rows):
         for f in ("R","S","W","T","F","E"):
             if row.get(f) == '1':
                 faults.append(f) 
-            elif row.get(f) != '0':
-                faults.append(row.get(f) + f)
+            elif row.get(f,'0') != '0':
+                faults.append(row.get(f,'0') + f)
         row['Faults'] = ','.join(faults)
 
 # Calculate the statistics (running averages) for specific columns for all rows
@@ -347,7 +345,7 @@ def table_row(w, dog, group, cols, row):
     css_class = 'class="' + row_css_class(row.get("Result")) +'"' if row.get("Result") else ''
     w.write('  <tr ' + css_class + '>\n')
     for c in cols:
-        w.write('    <td class="' + col_css_class(c) +'" >' + row.get(c, '') + '</td>\n')
+        w.write('    <td class="' + col_css_class(c) +'" >' + str(row.get(c, '')) + '</td>\n')
     w.write('  </tr>\n')
 
 # Write an table close to the HTML output file
@@ -431,7 +429,8 @@ file_metas.append(meta)
 (ftr_rows, meta) = read_csv(ftr_csv_file, ftr_csv_cols, "FeelTheRush")
 file_metas.append(meta)
 
-# TODO: Merge FTR rows into the PPT rows, which is the master table
+# Merge FTR rows into the PPT rows
+rows.extend(ftr_rows)
 
 # clean up data
 remove_absences(rows)
@@ -482,14 +481,22 @@ with open(report_file, 'w') as w:
     html_footer(w)
 
 # optionally create the debug file with all data in one giant table
-if False:
-    print('Writing', debug_file)
+if True:
+    print('DEBUG: Creating list of columns')
+
+    cols = []
+    for row in rows:
+        for col in row.keys():
+            if col not in cols:
+                cols.append(col)
+    
+    print('DEBUG: Writing', debug_file)
     with open(debug_file, 'w') as w:
         html_header(w)
         section_header(w, "Debug")
-        table_header(w, "Debug", "dump", all_cols)
+        table_header(w, "Debug", "dump", cols)
         for row in rows:
-            table_row(w, dog, group, all_cols, row)
+            table_row(w, dog, group, cols, row)
         table_footer(w)
         section_footer(w)
         html_footer(w)
