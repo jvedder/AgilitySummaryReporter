@@ -17,13 +17,16 @@ import io
 import os
 
 # input & output files to use as parameters
-csv_file    = 'PawPrint Trials Results.csv'
+ppt_csv_file    = 'PawPrint Trials Results.csv'
+ftr_csv_file    = 'My Results.csv'
 report_file = 'report.html'
 debug_file  = 'dump.html'
 
-# List of columns in the source CSV file. This needs to be updated if the CSV format changes.
-# TODO: There should be a way to read this from the CSV file and then handle column name mis-matches
-csv_cols = ["Date","Trial","Location","Dog","Handler","Class","Judge","Yards","SCT","Time","YPS","R","S","W","T","F","E","Score","Result","Place","MACH Pts","T2B Pts","Top25","Run ID"]
+# List of columns in the 'PawPrintTrials' source CSV files. This needs to be updated if the CSV format changes.
+ppt_csv_cols = ["Date","Trial","Location","Dog","Handler","Class","Judge","Yards","SCT","Time","YPS","R","S","W","T","F","E","Score","Result","Place","MACH Pts","T2B Pts","Top25","Run ID"]
+
+# List of columns in the 'FeelTheRush' source CSV files. This needs to be updated if the CSV format changes.
+ftr_csv_cols = ["Dogname","Trial Date","Club","Trial Day","Judge","Level","Class","SCT","Points","Time","Qual"]
 
 # List of columns to include for for each table that is output
 table_cols = {
@@ -74,7 +77,7 @@ col_css = {
     "Top25":        ["46px", "center"],
 
     'Filename':     ["235px", "left"],
-    'Row Count':    ["100px", "center"],
+    'Run Count':    ["100px", "center"],
     'File Date':    ["200px", "left"],
     'Last Run Date':["200px", "left"],
 }
@@ -93,11 +96,11 @@ FORMAT_DATE_TIME = "%m/%d/%Y %I:%M %p"
 # '12/04/2022'
 FORMAT_DATE = "%m/%d/%Y"
 
-# Reads the master CSV input file
-def read_csv(file):
+# Reads a CSV input file into a list of dict using the column headings 
+def read_csv(file, csv_cols, source):
     row_count = 0
     rows = [ ]
-    last_run_date = datetime.datetime(2020, 1, 1, 0, 0).date()
+    last_run_date = datetime.datetime(1999, 12, 31, 0, 0).date()
     print('Reading', file)
     with open(file, newline='', mode='r', encoding='utf-8-sig') as f:
         # skip the header row
@@ -107,15 +110,15 @@ def read_csv(file):
         for r in reader:
             # Reader returns a list of string for each CSV row
             # Convert each CSV row to dict with column names as key
-            if len(r) > 10:
+            if len(r) > 5:
                 row = dict()
                 index = 0
                 for c in csv_cols:
                     row[c] = r[index]
                     index += 1
-                    if c == "Date":
+                    if c in ("Date", "Trial Date"):
                         # parse the date field into a date object
-                        d = datetime.datetime.strptime(row["Date"], FORMAT_DATE).date()
+                        d = datetime.datetime.strptime(row[c], FORMAT_DATE).date()
                         row["SortDate"] = d
                         if d > last_run_date:
                             last_run_date = d
@@ -130,13 +133,13 @@ def read_csv(file):
     print_date = file_date.strftime(FORMAT_DATE_TIME)
     print ("File Date", print_date)
   
-    meta = dict()
-    meta['Filename'] = file
-    meta['Row Count'] = str(row_count)
-    meta['File Date'] = file_date.strftime(FORMAT_DATE_TIME)
-    meta['Last Run Date'] = last_run_date.strftime(FORMAT_DATE)
-    meta['rows'] = rows
-    return meta
+    file_meta = dict()
+    file_meta['Source'] = source
+    file_meta['Filename'] = file
+    file_meta['Run Count'] = str(row_count)
+    file_meta['File Date'] = file_date.strftime(FORMAT_DATE_TIME)
+    file_meta['Last Run Date'] = last_run_date.strftime(FORMAT_DATE)
+    return (rows, file_meta)
 
 # Remove absence rows 
 def remove_absences(rows):
@@ -290,9 +293,9 @@ def html_footer(w):
     w.write('</html>\n')
 
 # Write a table of file meta data
-def file_table(meta):
+def file_table(file_metas):
     print('  Source File Table')
-    cols = ['Filename','Row Count','File Date','Last Run Date']
+    cols = ['Source','Filename','Run Count','File Date','Last Run Date']
     now = datetime.datetime.now().strftime(FORMAT_DATE_TIME)
     w.write('<p><b>Report Date:</b> ' + now + '</p>\n')
     w.write('<h2>Source Files</h2>\n')
@@ -306,10 +309,11 @@ def file_table(meta):
     w.write('  </thead>\n')
     # table body
     w.write('  <tbody>\n')
-    w.write('  <tr>\n')
-    for c in cols:
-        w.write('    <td class="' + col_css_class(c) +'" >' + meta[c] + '</td>\n')
-    w.write('  </tr>\n')
+    for meta in file_metas:
+        w.write('  <tr>\n')
+        for c in cols:
+            w.write('    <td class="' + col_css_class(c) +'" >' + meta[c] + '</td>\n')
+        w.write('  </tr>\n')
     w.write('  </tbody>\n')
     w.write('</table>\n')
 
@@ -418,9 +422,16 @@ def plot_as_svg(table_rows, base_col):
 # # Main execution starts here
 # #    
 
-# Read the main CSV file into memory
-file_meta = read_csv(csv_file)
-rows = file_meta['rows']
+file_metas = []
+# Read the PawPrintTrials CSV file into memory
+(rows, meta) = read_csv(ppt_csv_file, ppt_csv_cols, "PawPrintTrials")
+file_metas.append(meta)
+
+# Read the FeelTheRuch CSV file into memory
+(ftr_rows, meta) = read_csv(ftr_csv_file, ftr_csv_cols, "FeelTheRush")
+file_metas.append(meta)
+
+# TODO: Merge FTR rows into the PPT rows, which is the master table
 
 # clean up data
 remove_absences(rows)
@@ -437,7 +448,7 @@ stat_cols = calc_stats(rows, dogs, groups)
 print('Writing', report_file)
 with open(report_file, 'w') as w:
     html_header(w)
-    file_table(file_meta)
+    file_table(file_metas)
     # each dog gets its own section
     for dog in dogs:
         section_header(w, dog)
