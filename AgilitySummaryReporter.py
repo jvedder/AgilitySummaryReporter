@@ -237,10 +237,11 @@ def calc_nac_points(rows, dog, year):
     nac_row["MACH Pts"] = str(nac_points)
     return nac_row
 
-# Convert a column name to its CSS class name
+# Convert a pretty column name to its clean CSS class name
 def col_css_class(c):
     return 'col-' + c.lower().replace(' ','-')
-# Convert a row name to its CSS class name
+
+# Convert a pretty row name to its claen CSS class name
 def row_css_class(r):
     return 'row-' + r.lower().replace(' ','-')
     
@@ -251,26 +252,34 @@ def html_header(w):
     w.write('<html>\n')
     w.write('<head>\n')
     w.write('<title>Agility Summary Report</title>\n')
+    # CSS styling -- include all here to keep the final report a single file
     w.write('  <style>\n')
     w.write('    body {font-family: Arial, Helvetica, sans-serif;}\n')   
     w.write('    table, th, td {border: 1px solid #ddd;}\n')
     w.write('    table {border-collapse: collapse;}\n')
     w.write('    th, td {padding: 0px 5px; text-align: left;}\n')
     w.write('    th {font-weight: bold; text-decoration: underline;}\n')
+    # emmit CSS for each table column
     for col in col_css:
+        # CSS selector
         w.write('    .'+ col_css_class(col) + ' {')
         i = 0
+        # grap the CSS properties for this column
         css = col_css[col]
+        # write all the properties if they are not empty
         for prop in css_prop:
             if (i < len(css)) and css[i]:
                 w.write(prop + ':' +  css[i] + '; ')
             i += 1
+        # close this CSS class
         w.write('}\n')
+    # emmit CSS for each type of table row
     w.write('    .row-q  {color:#000;}\n')
     w.write('    .row-nq {color:#ccc;}\n')
     w.write('    .row-a  {color:#ccc;}\n')
     w.write('    .scroll-x {overflow-x:scroll;}\n')
     w.write('  </style>\n')
+    # no Javascript (not needed!)
     w.write('</head>\n')
     # html body
     w.write('<body>\n')
