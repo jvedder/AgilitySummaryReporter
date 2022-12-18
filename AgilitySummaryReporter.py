@@ -151,7 +151,7 @@ def group_classes(rows):
     print('Grouping classes')
     groups = ('Master Std','Master JWW','Prem Std','Prem JWW','Master FAST','T2B','Other')
     for row in rows:
-        c = row['Class']
+        c = row.get('Class')
         group = 'Other'
         for g in groups:
             if c.startswith(g):
@@ -164,7 +164,7 @@ def group_dogs(rows):
     print('Grouping Dogs')
     dogs = set()
     for row in rows:
-        dogs.add(row['Dog'])
+        dogs.add(row.get('Dog'))
     dogs = list(dogs)
     dogs.sort(reverse=True)
     return dogs
@@ -176,10 +176,10 @@ def merge_faults(rows):
     for row in rows:
         faults = []
         for f in ("R","S","W","T","F","E"):
-            if row[f] == '1':
+            if row.get(f) == '1':
                 faults.append(f) 
-            elif row[f] != '0':
-                faults.append(row[f] + f)
+            elif row.get(f) != '0':
+                faults.append(row.get(f) + f)
         row['Faults'] = ','.join(faults)
 
 # Calculate the statistics (running averages) for specific columns for all rows
@@ -192,20 +192,20 @@ def calc_stats(rows, dogs, groups):
         print('  Dog:', dog)
         for group in groups:
             print('    Stats:', dog, group)
-            table_rows = [row for row in rows if row['Dog']==dog and row['Group']==group]
+            table_rows = [row for row in rows if row.get('Dog')==dog and row.get('Group')==group]
             for col in stat_cols:
                 # history is a running list of values for this stat column
                 history = list()
                 for row in table_rows:
                     # Q Rate is computed for all rows; other stats only for the Q rows
-                    if col == "Q Rate" or row["Result"] == "Q":
+                    if col == "Q Rate" or row.get("Result") == "Q":
                         # Use 100 or 0 for Q or NQ to report average result in percent
                         if col == "Q Rate":
-                            value = 100 if row["Result"] == "Q" else 0
+                            value = 100 if row.get("Result") == "Q" else 0
                             # save the Q or NQ as a value of 0 or 10 for sane plotting
                             row["Q Rate"] = value / 10 
                         else:
-                            value = float(row[col]) if row[col] else 0
+                            value = float(row.get(col)) if row.get(col) else 0
                         # append this value to the running list of values for this class
                         history.append(value)
                         # compute average of *all* values up to this point
@@ -221,14 +221,14 @@ def calc_stats(rows, dogs, groups):
 # Calulate the MACH Pts for National Agility Championship (NAC)
 def calc_nac_points(rows, dog, year):
     nac_groups = ("Master Std", "Master JWW")
-    nac_rows = [row for row in rows if row['Dog']==dog and row['Group'] in nac_groups]
+    nac_rows = [row for row in rows if row.get('Dog')==dog and row.get('Group') in nac_groups]
     # NAC year runs from Dec 1 to Nov 30
     nac_start_date = datetime.datetime(year-2, 12, 1, 0, 0).date()
     nac_end_date   = datetime.datetime(year-1, 11, 30, 0, 0).date()
     nac_points = 0
     for row in nac_rows:
-        if nac_start_date <= row['SortDate'] and  row['SortDate'] <= nac_end_date:
-            pts = int(row['MACH Pts']) if row['MACH Pts'] else 0
+        if nac_start_date <= row.get('SortDate') and  row.get('SortDate') <= nac_end_date:
+            pts = int(row.get('MACH Pts',0)) if row.get('MACH Pts') else 0
             # remove negative MACH points
             if pts > 0:
                 nac_points += pts
@@ -344,10 +344,10 @@ def table_header(w, dog, group, cols):
 # Write a single table row to the HTML output file
 def table_row(w, dog, group, cols, row):
     # table body rows
-    css_class = 'class="' + row_css_class(row["Result"]) +'"' if row["Result"] else ''
+    css_class = 'class="' + row_css_class(row.get("Result")) +'"' if row.get("Result") else ''
     w.write('  <tr ' + css_class + '>\n')
     for c in cols:
-        w.write('    <td class="' + col_css_class(c) +'" >' + row[c] + '</td>\n')
+        w.write('    <td class="' + col_css_class(c) +'" >' + row.get(c, '') + '</td>\n')
     w.write('  </tr>\n')
 
 # Write an table close to the HTML output file
@@ -386,9 +386,9 @@ def plot_as_svg(table_rows, base_col):
         xdata = []
         ydata = []
         for row in table_rows:
-            if col == "Q Rate" or row["Result"] == "Q":
+            if col == "Q Rate" or row.get("Result") == "Q":
                 x = datetime.datetime.strptime(row["Date"], FORMAT_DATE)
-                y  = float(row[col]) if row[col] else 0
+                y  = float(row.get(col,0)) if row.get(col) else 0
                 # do we need to adjust the max y value of the plot?
                 if y > y_max:
                     # round up to next multiple of 5
@@ -454,7 +454,7 @@ with open(report_file, 'w') as w:
         section_header(w, dog)
         # create a table for each group (aka agility class)
         for group in groups:
-            table_rows = [row for row in rows if row['Dog']==dog and row['Group']==group]
+            table_rows = [row for row in rows if row.get('Dog')==dog and row.get('Group')==group]
             # skip empty tables and odd-ball classes
             if table_rows and (not group == "Other"):
                 # Create the table
