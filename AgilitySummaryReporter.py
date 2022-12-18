@@ -40,9 +40,9 @@ table_cols = {
 all_cols = ["Date","Trial","Location","Dog","Handler","Class","Group","Judge","Yards","SCT","Time","YPS","Avg YPS","Avg15 YPS","R","S","W","T","F","E","Score","Avg Score","Avg15 Score","Result","Avg Q Rate","Avg15 Q Rate",
             "Place","MACH Pts","Avg MACH Pts","Avg15 MACH Pts","T2B Pts","Avg MACH Pts","Avg15 MACH Pts","Top25","Run ID"]
 
-# Collection of CSS classe to emit
+# CSS Properties used and values by column name
+css_prop = ("min-width", "text-align", "background-color")
 col_css = {
-    # Column:        [min-width, text-align]
     "Date" :        ["81px", "left"],
     "Trial":        ["236px", "left"],
     "Location":     ["217px", "left"],
@@ -54,20 +54,20 @@ col_css = {
     "Yards":        ["44px", "center"],
     "SCT":          ["32px", "center"],
     "Time":         ["41px", "center"],
-    "YPS":          ["32px", "center"],
-    "Avg YPS":      ["32px", "center"],
-    "Avg15 YPS":    ["32px", "center"],
+    "YPS":          ["32px", "center", "#a569bd"],
+    "Avg YPS":      ["32px", "center", "#d693f0"],
+    "Avg15 YPS":    ["32px", "center", "#EBDEF0"],
     "Faults":       ["80px", "left"],
     "Score":        ["45px", "center"],
     "Avg Score":    ["45px", "center"],
     "Avg15 Score":  ["45px", "center"],
     "Result":       ["45px", "center"],
-    "Avg Q Rate":   ["45px", "center"],
-    "Avg15 Q Rate": ["45px", "center"],
+    "Avg Q Rate":   ["45px", "center", "#58D68d"],
+    "Avg15 Q Rate": ["45px", "center", "#AAE9C5"],
     "Place":        ["45px", "center"],
-    "MACH Pts":     ["77px", "center"],
-    "Avg MACH Pts": ["77px", "center"],
-    "Avg15 MACH Pts":["77px", "center"],
+    "MACH Pts":     ["77px", "center", "#f0d70b"],
+    "Avg MACH Pts": ["77px", "center" , "#d3c65e"],
+    "Avg15 MACH Pts":["77px", "center", "#f4eec1"],
     "T2B Pts":      ["60px", "center"],
     "Avg T2B Pts":  ["60px", "center"],
     "Avg15 T2B Pts":["60px", "center"],
@@ -257,8 +257,15 @@ def html_header(w):
     w.write('    table {border-collapse: collapse;}\n')
     w.write('    th, td {padding: 0px 5px; text-align: left;}\n')
     w.write('    th {font-weight: bold; text-decoration: underline;}\n')
-    for c in col_css:
-        w.write('    .'+ col_css_class(c) + ' {min-width:'+ col_css[c][0] +'; text-align:'+ col_css[c][1] +';}\n')
+    for col in col_css:
+        w.write('    .'+ col_css_class(col) + ' {')
+        i = 0
+        css = col_css[col]
+        for prop in css_prop:
+            if (i < len(css)) and css[i]:
+                w.write(prop + ':' +  css[i] + '; ')
+            i += 1
+        w.write('}\n')
     w.write('    .row-q  {color:#000;}\n')
     w.write('    .row-nq {color:#ccc;}\n')
     w.write('    .row-a  {color:#ccc;}\n')
