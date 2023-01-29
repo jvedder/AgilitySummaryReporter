@@ -1,5 +1,5 @@
 # Paw Print Trials Report formater
-# Copyright (c) 2022 John Vedder.  MIT License
+# Copyright (c) 2023 John Vedder.  MIT License
 #
 # Formats the results CSV file downloaded from PawPrintTrials.com into a
 # single file HTML report organized by dog and agility class.
@@ -30,20 +30,26 @@ ftr_csv_cols = ["Dogname","Trial Date","Club","Trial Day","Judge","Level","Class
 
 # List of columns to include for for each table that is output
 table_cols = {
-    "Master Std":   ["Date","Trial","Location","Judge","Yards","SCT","Time","YPS","Avg YPS","Avg15 YPS","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","MACH Pts","Avg MACH Pts","Avg15 MACH Pts"],
-    "Master JWW":   ["Date","Trial","Location","Judge","Yards","SCT","Time","YPS","Avg YPS","Avg15 YPS","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","MACH Pts","Avg MACH Pts","Avg15 MACH Pts"],
-    "Prem Std":     ["Date","Trial","Location","Judge","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","Top25"],
-    "Prem JWW":     ["Date","Trial","Location","Judge","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","Top25"],
-    "Master FAST":  ["Date","Trial","Location","Judge","Faults","Score","Avg Score","Avg15 Score","Result","Avg Q Rate","Avg15 Q Rate","Place"],
-    "T2B" :         ["Date","Trial","Location","Judge","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","T2B Pts","Avg T2B Pts","Avg15 T2B Pts"],
-    "Other" :       ["Date","Trial","Location","Class","Judge","Yards","SCT","Time","YPS","Avg YPS","Avg15 YPS","Faults","Score","Avg Score","Avg15 Score","Result","Avg Q Rate","Avg15 Q Rate","Place","MACH Pts","Avg MACH Pts","Avg15 MACH Pts","T2B Pts","Avg T2B Pts","Avg15 T2B Pts","Top25"],
+    "Master Std":   ["Date","Source","Club","Location","Judge","Yards","SCT","Time","YPS","Avg YPS","Avg15 YPS","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","MACH Pts","Avg MACH Pts","Avg15 MACH Pts"],
+    "Master JWW":   ["Date","Source","Club","Location","Judge","Yards","SCT","Time","YPS","Avg YPS","Avg15 YPS","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","MACH Pts","Avg MACH Pts","Avg15 MACH Pts"],
+    "Prem Std":     ["Date","Source","Club","Location","Judge","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","Top25"],
+    "Prem JWW":     ["Date","Source","Club","Location","Judge","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","Top25"],
+    "Master FAST":  ["Date","Source","Club","Location","Judge","Faults","Score","Avg Score","Avg15 Score","Result","Avg Q Rate","Avg15 Q Rate","Place"],
+    "T2B" :         ["Date","Source","Club","Location","Judge","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","T2B Pts","Avg T2B Pts","Avg15 T2B Pts"],
+    "Other" :       ["Date","Source","Club","Location","Class","Judge","Yards","SCT","Time","YPS","Avg YPS","Avg15 YPS","Faults","Score","Avg Score","Avg15 Score","Result","Avg Q Rate","Avg15 Q Rate","Place","MACH Pts","Avg MACH Pts","Avg15 MACH Pts","T2B Pts","Avg T2B Pts","Avg15 T2B Pts","Top25"],
 }
+
+# Standard list of class names (called groups because class is a reserved word)
+levels = ('Novice','Open','Excellent','Master','Premier')
+games = ('Std','JWW','FAST','T2B')
+groups = ('Master Std','Master JWW','Prem Std','Prem JWW','Master FAST','T2B','Other')
 
 # CSS Properties used and values by column name
 css_prop = ("min-width", "text-align", "background-color")
 col_css = {
     "Date" :        ["81px", "left"],
     "Trial":        ["236px", "left"],
+    "Club":         ["236px", "left"],
     "Location":     ["217px", "left"],
     "Dog":          ["35px", "left"],
     "Handler":      ["100px", "left"],
@@ -92,11 +98,14 @@ FORMAT_DATE_TIME = "%m/%d/%Y %I:%M %p"
 # '12/04/2022'
 FORMAT_DATE = "%m/%d/%Y"
 
+# default date to use for missing dates
+DEFAULT_DATE = datetime.datetime(1999, 12, 31, 0, 0).date()
+
 # Reads a CSV input file into a list of dict using the column headings 
 def read_csv(file, csv_cols, source):
     row_count = 0
     rows = []
-    last_run_date = datetime.datetime(1999, 12, 31, 0, 0).date()
+    last_run_date = DEFAULT_DATE
     print('Reading', file)
     with open(file, newline='', mode='r', encoding='utf-8-sig') as f:
         # skip the header row
@@ -138,23 +147,70 @@ def read_csv(file, csv_cols, source):
     file_meta['Last Run Date'] = last_run_date.strftime(FORMAT_DATE)
     return (rows, file_meta)
 
-# Remove absence rows 
-def remove_absences(rows):
-        rows[:] = [r for r in rows if not r.get("Result") == 'A']
 
-# Group classes by their common name.
-# For example, [Master Std # 1 8"P] and [Master Std # 2 8"P] are in the same group called [Master Std]
-def group_classes(rows):
-    print('Grouping classes')
-    groups = ('Master Std','Master JWW','Prem Std','Prem JWW','Master FAST','T2B','Other')
+# Maps PawPrintTrials column names into the perferred names
+def map_ppt_columns(rows):
     for row in rows:
+        # mark the source
+        row['Source'] = 'PawPrint'
+        # the 'Trial' field is actually the Club Name
+        row['Club'] = row.get('Trial','')
+        # 2 trials on same day are marked #1 and #2 in the 'Class' field
+        row['TrialNum'] = '2' if '#2' in row.get('Class','') else '1'
+        # Group level & classes by their common name.
+        # For example, [Master Std # 1 8"P] and [Master Std # 2 8"P] map to [Master Std]
         c = row.get('Class','')
         group = 'Other'
         for g in groups:
             if c.startswith(g):
                 group = g
         row['Group'] = group
-    return groups
+
+
+# Maps FeelTheRushTrials column names into the perferred names
+def map_ftr_columns(rows):
+    for row in rows:
+        # mark the source
+        row['Source'] = 'FeelTheRush'
+        # use 'Dog', not 'Dogname'
+        row['Dog'] = remove_html_tags(row.get('Dogname',''))
+        # Use 'Date', not 'Trial Date'
+        row['Date'] = row.get('Trial Date', DEFAULT_DATE)
+        # for 2 for trials on same day
+        row['TrialNum'] = row.get('Trial Day','1')
+        # use 'Results', not 'Qual', for Q and NQ
+        row['Result'] = row.get('Qual','')
+        # Group level & classes by their common name.
+        group = ''
+        level = row.get('Level','')
+        for l in levels:
+            if l in level:
+                group = l + ' '
+                row
+        game = row.get('Class','')
+        for g in games:
+            if g in game:
+                group = group + g
+        if group not in groups:
+            group = "Other"
+        row['Group'] = group        
+
+
+# Removes HTML tags from a text string
+def remove_html_tags(text):
+    found = True
+    while (found):
+        left = text.find('<')
+        right = text.find('>')
+        if (left > -1) and (left < right):
+            text = text[:left] + text[right+1:]
+        else:
+            found = False
+    return text
+
+# Remove absence rows 
+def remove_absences(rows):
+        rows[:] = [r for r in rows if not r.get("Result") == 'A']
 
 # Creates a reverse sorted list of unique dog names
 def group_dogs(rows):
@@ -423,14 +479,17 @@ def plot_as_svg(table_rows, base_col):
 file_metas = []
 # Read the PawPrintTrials CSV file into memory
 (rows, meta) = read_csv(ppt_csv_file, ppt_csv_cols, "PawPrintTrials")
+map_ppt_columns(rows)
 file_metas.append(meta)
 
 # Read the FeelTheRuch CSV file into memory
 (ftr_rows, meta) = read_csv(ftr_csv_file, ftr_csv_cols, "FeelTheRush")
 file_metas.append(meta)
+map_ftr_columns(ftr_rows)
 
 # Merge FTR rows into the PPT rows
 rows.extend(ftr_rows)
+rows.sort(key=lambda r: r['SortDate'])
 
 # clean up data
 remove_absences(rows)
@@ -438,7 +497,6 @@ merge_faults(rows)
 
 # Get lists of unique dogs and catlog classes into groups
 dogs = group_dogs(rows)
-groups = group_classes(rows)
 
 # Calculate and add statistics columns to the data 
 stat_cols = calc_stats(rows, dogs, groups)
