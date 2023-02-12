@@ -474,7 +474,7 @@ def plot_as_svg(table_runs, base_col):
         xdata = []
         ydata = []
         for run in table_runs:
-            if col == "Q Rate" or run.get("Result") == "Q":
+            if base_col == "Q Rate" or run.get("Result") == "Q":
                 x = datetime.datetime.strptime(run["Date"], FORMAT_DATE)
                 y  = float(run.get(col,0)) if run.get(col) else 0
                 # do we need to adjust the max y value of the plot?
