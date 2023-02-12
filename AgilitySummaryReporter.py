@@ -32,17 +32,17 @@ ftr_csv_cols = ["Dogname","Trial Date","Club","Trial Day","Judge","Level","Class
 table_cols = {
     "Master Std":   ["Date","Source","Club","Location","Judge","Yards","SCT","Time","YPS","Avg YPS","Avg15 YPS","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","MACH Pts","Avg MACH Pts","Avg15 MACH Pts"],
     "Master JWW":   ["Date","Source","Club","Location","Judge","Yards","SCT","Time","YPS","Avg YPS","Avg15 YPS","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","MACH Pts","Avg MACH Pts","Avg15 MACH Pts"],
-    "Prem Std":     ["Date","Source","Club","Location","Judge","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","Top25"],
-    "Prem JWW":     ["Date","Source","Club","Location","Judge","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","Top25"],
+    "Premier Std":  ["Date","Source","Club","Location","Judge","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","Top25"],
+    "Premier JWW":  ["Date","Source","Club","Location","Judge","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","Top25"],
     "Master FAST":  ["Date","Source","Club","Location","Judge","Faults","Score","Avg Score","Avg15 Score","Result","Avg Q Rate","Avg15 Q Rate","Place"],
     "T2B" :         ["Date","Source","Club","Location","Judge","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","T2B Pts","Avg T2B Pts","Avg15 T2B Pts"],
     "Other" :       ["Date","Source","Club","Location","Class","Judge","Yards","SCT","Time","YPS","Avg YPS","Avg15 YPS","Faults","Score","Avg Score","Avg15 Score","Result","Avg Q Rate","Avg15 Q Rate","Place","MACH Pts","Avg MACH Pts","Avg15 MACH Pts","T2B Pts","Avg T2B Pts","Avg15 T2B Pts","Top25"],
 }
 
 # Standard list of class names (called groups because class is a reserved word)
-levels = ('Novice','Open','Excellent','Master','Premier')
-games = ('Std','JWW','FAST','T2B')
-groups = ('Master Std','Master JWW','Prem Std','Prem JWW','Master FAST','T2B','Other')
+levels =  ('Novice','Open','Excellent','Master','Premier')
+classes = ('Std','JWW','FAST','T2B')
+groups =  ('Master Std','Master JWW','Premier Std','Premier JWW','Master FAST','T2B','Other')
 
 # CSS Properties used and values by column name
 css_prop = ("min-width", "text-align", "background-color")
@@ -98,7 +98,7 @@ FORMAT_DATE_TIME = "%m/%d/%Y %I:%M %p"
 # '12/04/2022'
 FORMAT_DATE = "%m/%d/%Y"
 
-# default date to use for missing dates
+# default date to use for missing dates: 12/31/1999
 DEFAULT_DATE = datetime.datetime(1999, 12, 31, 0, 0).date()
 
 # Reads a CSV input file into a list of dict using the column headings 
@@ -147,30 +147,48 @@ def read_csv(file, csv_cols, source):
     file_meta['Last Run Date'] = last_run_date.strftime(FORMAT_DATE)
     return (rows, file_meta)
 
+# Gets the agility level from a string that contains the level name
+def get_level(text):
+    level = ''
+    for l in levels:
+        if l in text:
+            level = l
+            break
+    # Special case: PPT uses 'Prem' for 'Premier'
+    if 'Prem' in text:
+        level = 'Premier'
+    return level
 
-# Maps PawPrintTrials column names into the perferred names
+# Gets the agility class from a string that contains the class name
+def get_class(text):
+    agility_class = ''
+    for c in classes:
+        if c in text:
+            agility_class = c
+            break
+    return agility_class
+
+# Maps PawPrintTrials column names into the preferred names
 def map_ppt_columns(rows):
     for row in rows:
-        # mark the source
+        # mark the data source
         row['Source'] = 'PawPrint'
         # the 'Trial' field is actually the Club Name
         row['Club'] = row.get('Trial','')
         # 2 trials on same day are marked #1 and #2 in the 'Class' field
+        # single trial on a day has neither #1 or #2, so default to #1
         row['TrialNum'] = '2' if '#2' in row.get('Class','') else '1'
-        # Group level & classes by their common name.
-        # For example, [Master Std # 1 8"P] and [Master Std # 2 8"P] map to [Master Std]
-        c = row.get('Class','')
-        group = 'Other'
-        for g in groups:
-            if c.startswith(g):
-                group = g
-        row['Group'] = group
+        # Define level & class by their simple name.
+        # PPT 'Class' includes both the level and class
+        ppt_class = row.get('Class','')
+        row['PPT Class'] = ppt_class
+        row['Level'] = get_level(ppt_class)
+        row['Class'] = get_class(ppt_class)
 
-
-# Maps FeelTheRushTrials column names into the perferred names
+# Maps FeelTheRushTrials column names into the preferred names
 def map_ftr_columns(rows):
     for row in rows:
-        # mark the source
+        # mark the data source
         row['Source'] = 'FeelTheRush'
         # use 'Dog', not 'Dogname'
         row['Dog'] = remove_html_tags(row.get('Dogname',''))
@@ -180,21 +198,22 @@ def map_ftr_columns(rows):
         row['TrialNum'] = row.get('Trial Day','1')
         # use 'Results', not 'Qual', for Q and NQ
         row['Result'] = row.get('Qual','')
-        # Group level & classes by their common name.
-        group = ''
-        level = row.get('Level','')
-        for l in levels:
-            if l in level:
-                group = l + ' '
-                row
-        game = row.get('Class','')
-        for g in games:
-            if g in game:
-                group = group + g
-        if group not in groups:
-            group = "Other"
-        row['Group'] = group        
-
+        # map the 'Points' field to 'MACH Pts', 'Score' and 'T2B Pts" based on class
+        pts = row.get('Points','0')
+        this_class = row.get('Class','')
+        if this_class in ('JWW','Std'):
+            row['MACH Pts'] = pts
+        elif this_class == 'FAST':
+            row['Score'] = pts
+        elif this_class == 'T2B':
+            row['T2B Pts'] = pts
+        # Define level & classes by their common name
+        ftr_level = row.get('Level','')
+        row['FTR Level'] = ftr_level
+        row['Level'] = get_level(ftr_level)
+        ftr_class = row.get('Class','')
+        row['FTR Class'] = ftr_class
+        row['Class'] = get_class(ftr_class)
 
 # Removes HTML tags from a text string
 def remove_html_tags(text):
@@ -211,6 +230,22 @@ def remove_html_tags(text):
 # Remove absence rows 
 def remove_absences(rows):
         rows[:] = [r for r in rows if not r.get("Result") == 'A']
+
+# For convenience, create 'Group' field = level & class
+def group_level_and_class(rows):
+    for row in rows:
+        level = row.get('Level','')
+        agility_class = row.get('Class','')
+        #Special Case: T2B has no level
+        if agility_class == 'T2B':
+            group = agility_class
+        else:
+            group = level + ' ' + agility_class
+        # Filter our=t unwanted groups (for now) as 'Other'
+        # TODO: Remove this check when future dog class list is implemented
+        if group not in groups:
+            group = "Other"
+        row['Group'] = group
 
 # Creates a reverse sorted list of unique dog names
 def group_dogs(rows):
@@ -493,7 +528,9 @@ rows.sort(key=lambda r: r['SortDate'])
 
 # clean up data
 remove_absences(rows)
+group_level_and_class(rows)
 merge_faults(rows)
+
 
 # Get lists of unique dogs and catlog classes into groups
 dogs = group_dogs(rows)
