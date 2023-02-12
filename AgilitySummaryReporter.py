@@ -102,34 +102,34 @@ DEFAULT_DATE = datetime.datetime(1999, 12, 31, 0, 0).date()
 
 # Reads a CSV input file into a list of dict using the column headings 
 def read_csv(file, csv_cols, source):
-    row_count = 0
-    rows = []
+    run_count = 0
+    runs = []
     last_run_date = DEFAULT_DATE
     print('Reading', file)
     with open(file, newline='', mode='r', encoding='utf-8-sig') as f:
-        # skip the header row
+        # skip the header line
         f.readline( )
         # read the remainder of the file as CSV rows
         reader = csv.reader(f)
-        for r in reader:
+        for row in reader:
             # Reader returns a list of string for each CSV row
             # Convert each CSV row to dict with column names as key
-            if len(r) > 5:
-                row = dict()
-                row['Source'] = source
+            if len(row) > 5:
+                run = dict()
+                run['Source'] = source
                 index = 0
                 for c in csv_cols:
-                    row[c] = r[index]
+                    run[c] = row[index]
                     index += 1
                     if c in ("Date", "Trial Date"):
                         # parse the date field into a date object
-                        d = datetime.datetime.strptime(row[c], FORMAT_DATE).date()
-                        row["SortDate"] = d
+                        d = datetime.datetime.strptime(run[c], FORMAT_DATE).date()
+                        run["SortDate"] = d
                         if d > last_run_date:
                             last_run_date = d
-                rows.append(row)
-                row_count += 1
-    print (row_count, 'lines read.')
+                runs.append(run)
+                run_count += 1
+    print (run_count, 'lines read.')
     print ("Last run", last_run_date.strftime(FORMAT_DATE))
 
     # get the modification date/time of the file
@@ -141,10 +141,10 @@ def read_csv(file, csv_cols, source):
     file_meta = dict()
     file_meta['Source'] = source
     file_meta['Filename'] = file
-    file_meta['Run Count'] = str(row_count)
+    file_meta['Run Count'] = str(run_count)
     file_meta['File Date'] = file_date.strftime(FORMAT_DATE_TIME)
     file_meta['Last Run Date'] = last_run_date.strftime(FORMAT_DATE)
-    return (rows, file_meta)
+    return (runs, file_meta)
 
 # Gets the agility level from a string that contains the level name
 def get_level(text):
@@ -168,51 +168,51 @@ def get_class(text):
     return agility_class
 
 # Maps PawPrintTrials column names into the preferred names
-def map_ppt_columns(rows):
-    for row in rows:
+def map_ppt_columns(runs):
+    for run in runs:
         # mark the data source
-        row['Source'] = 'PawPrint'
+        run['Source'] = 'PawPrint'
         # the 'Trial' field is actually the Club Name
-        row['Club'] = row.get('Trial','')
+        run['Club'] = run.get('Trial','')
         # 2 trials on same day are marked #1 and #2 in the 'Class' field
         # single trial on a day has neither #1 or #2, so default to #1
-        row['TrialNum'] = '2' if '#2' in row.get('Class','') else '1'
+        run['TrialNum'] = '2' if '#2' in run.get('Class','') else '1'
         # Define level & class by their simple name.
         # PPT 'Class' includes both the level and class
-        ppt_class = row.get('Class','')
-        row['PPT Class'] = ppt_class
-        row['Level'] = get_level(ppt_class)
-        row['Class'] = get_class(ppt_class)
+        ppt_class = run.get('Class','')
+        run['PPT Class'] = ppt_class
+        run['Level'] = get_level(ppt_class)
+        run['Class'] = get_class(ppt_class)
 
 # Maps FeelTheRushTrials column names into the preferred names
-def map_ftr_columns(rows):
-    for row in rows:
+def map_ftr_columns(runs):
+    for run in runs:
         # mark the data source
-        row['Source'] = 'FeelTheRush'
+        run['Source'] = 'FeelTheRush'
         # use 'Dog', not 'Dogname'
-        row['Dog'] = remove_html_tags(row.get('Dogname',''))
+        run['Dog'] = remove_html_tags(run.get('Dogname',''))
         # Use 'Date', not 'Trial Date'
-        row['Date'] = row.get('Trial Date', DEFAULT_DATE)
+        run['Date'] = run.get('Trial Date', DEFAULT_DATE)
         # for 2 for trials on same day
-        row['TrialNum'] = row.get('Trial Day','1')
+        run['TrialNum'] = run.get('Trial Day','1')
         # use 'Results', not 'Qual', for Q and NQ
-        row['Result'] = row.get('Qual','')
+        run['Result'] = run.get('Qual','')
         # map the 'Points' field to 'MACH Pts', 'Score' and 'T2B Pts" based on class
-        pts = row.get('Points','0')
-        this_class = row.get('Class','')
+        pts = run.get('Points','0')
+        this_class = run.get('Class','')
         if this_class in ('JWW','Std'):
-            row['MACH Pts'] = pts
+            run['MACH Pts'] = pts
         elif this_class == 'FAST':
-            row['Score'] = pts
+            run['Score'] = pts
         elif this_class == 'T2B':
-            row['T2B Pts'] = pts
+            run['T2B Pts'] = pts
         # Define level & classes by their common name
-        ftr_level = row.get('Level','')
-        row['FTR Level'] = ftr_level
-        row['Level'] = get_level(ftr_level)
-        ftr_class = row.get('Class','')
-        row['FTR Class'] = ftr_class
-        row['Class'] = get_class(ftr_class)
+        ftr_level = run.get('Level','')
+        run['FTR Level'] = ftr_level
+        run['Level'] = get_level(ftr_level)
+        ftr_class = run.get('Class','')
+        run['FTR Class'] = ftr_class
+        run['Class'] = get_class(ftr_class)
 
 # Removes HTML tags from a text string
 def remove_html_tags(text):
@@ -226,15 +226,15 @@ def remove_html_tags(text):
             found = False
     return text
 
-# Remove absence rows 
-def remove_absences(rows):
-        rows[:] = [r for r in rows if not r.get("Result") == 'A']
+# Remove absence runs 
+def remove_absences(runs):
+        runs[:] = [r for r in runs if not r.get("Result") == 'A']
 
 # For convenience, create 'Group' field = level & class
-def group_level_and_class(rows):
-    for row in rows:
-        level = row.get('Level','')
-        agility_class = row.get('Class','')
+def group_level_and_class(runs):
+    for run in runs:
+        level = run.get('Level','')
+        agility_class = run.get('Class','')
         #Special Case: T2B has no level
         if agility_class == 'T2B':
             group = agility_class
@@ -244,95 +244,95 @@ def group_level_and_class(rows):
         # TODO: Remove this check when future dog class list is implemented
         if group not in groups:
             group = "Other"
-        row['Group'] = group
+        run['Group'] = group
 
 # Creates a reverse sorted list of unique dog names
-def group_dogs(rows):
+def group_dogs(runs):
     print('Grouping Dogs')
     dogs = set()
-    for row in rows:
-        if row.get('Dog', False):
-            dogs.add(row.get('Dog'))
+    for run in runs:
+        if run.get('Dog', False):
+            dogs.add(run.get('Dog'))
     dogs = list(dogs)
     dogs.sort(reverse=True)
     return dogs
 
 # Merge fault count columns into one text column
 # For example R=1, W=2, other fault=0 becomes 'R,2W'
-def merge_faults(rows):
+def merge_faults(runs):
     print('Merging Faults')
-    for row in rows:
+    for run in runs:
         faults = []
         for f in ("R","S","W","T","F","E"):
-            if row.get(f) == '1':
+            if run.get(f) == '1':
                 faults.append(f) 
-            elif row.get(f,'0') != '0':
-                faults.append(row.get(f,'0') + f)
-        row['Faults'] = ','.join(faults)
+            elif run.get(f,'0') != '0':
+                faults.append(run.get(f,'0') + f)
+        run['Faults'] = ','.join(faults)
 
-# Calculate the statistics (running averages) for specific columns for all rows
-# The calculated stats are added as new 'columns' to the row dictionary as text strings
-# NQ rows are assigned an empty string
-def calc_stats(rows, dogs, groups):
+# Calculate the statistics (running averages) for specific columns for all runs
+# The calculated stats are added as new 'columns' to the run dictionary as text strings
+# NQ runs are assigned an empty string
+def calc_stats(runs, dogs, groups):
     print('Calculating stats')
     stat_cols = ["Q Rate", "YPS", "Score", "MACH Pts", "T2B Pts"]
     for dog in dogs:
         print('  Dog:', dog)
         for group in groups:
             print('    Stats:', dog, group)
-            table_rows = [row for row in rows if row.get('Dog')==dog and row.get('Group')==group]
+            table_runs = [run for run in runs if run.get('Dog')==dog and run.get('Group')==group]
             for col in stat_cols:
                 # history is a running list of values for this stat column
                 history = list()
-                for row in table_rows:
-                    # Q Rate is computed for all rows; other stats only for the Q rows
-                    if col == "Q Rate" or row.get("Result") == "Q":
+                for run in table_runs:
+                    # Q Rate is computed for all runs; other stats only for the Q runs
+                    if col == "Q Rate" or run.get("Result") == "Q":
                         # Use 100 or 0 for Q or NQ to report average result in percent
                         if col == "Q Rate":
-                            value = 100 if row.get("Result") == "Q" else 0
+                            value = 100 if run.get("Result") == "Q" else 0
                             # save the Q or NQ as a value of 0 or 10 for sane plotting
-                            row["Q Rate"] = value / 10 
+                            run["Q Rate"] = value / 10 
                         else:
-                            value = float(row.get(col)) if row.get(col) else 0
+                            value = float(run.get(col)) if run.get(col) else 0
                         # append this value to the running list of values for this class
                         history.append(value)
                         # compute average of *all* values up to this point
-                        row["Avg " + col] = str(round(statistics.mean(history),2))
+                        run["Avg " + col] = str(round(statistics.mean(history),2))
                         # compute average of last 15 values
-                        row["Avg15 " + col] = str(round(statistics.mean(history[-15:]),2))
+                        run["Avg15 " + col] = str(round(statistics.mean(history[-15:]),2))
                     else:
-                        # No stats for NQ rows (except Q-Rate)
-                        row["Avg " + col] = ''
-                        row["Avg15 " + col] = ''
+                        # No stats for NQ runs (except Q-Rate)
+                        run["Avg " + col] = ''
+                        run["Avg15 " + col] = ''
     return stat_cols
 
 # Calulate the MACH Pts for National Agility Championship (NAC)
-def calc_nac_points(rows, dog, year):
+def calc_nac_points(runs, dog, year):
     nac_groups = ("Master Std", "Master JWW")
-    nac_rows = [row for row in rows if row.get('Dog')==dog and row.get('Group') in nac_groups]
+    nac_runs = [run for run in runs if run.get('Dog')==dog and run.get('Group') in nac_groups]
     # NAC year runs from Dec 1 to Nov 30
     nac_start_date = datetime.datetime(year-2, 12, 1, 0, 0).date()
     nac_end_date   = datetime.datetime(year-1, 11, 30, 0, 0).date()
     nac_points = 0
-    for row in nac_rows:
-        if nac_start_date <= row.get('SortDate') and  row.get('SortDate') <= nac_end_date:
-            pts = int(row.get('MACH Pts',0)) if row.get('MACH Pts') else 0
+    for run in nac_runs:
+        if nac_start_date <= run.get('SortDate') and  run.get('SortDate') <= nac_end_date:
+            pts = int(run.get('MACH Pts',0)) if run.get('MACH Pts') else 0
             # remove negative MACH points
             if pts > 0:
                 nac_points += pts
-    nac_row = dict()
-    nac_row["Result"] = "Q"  # Required for Table CSS and filtering
-    nac_row["NAC Year"] = str(year)
-    nac_row["Start Date"] = nac_start_date.strftime(FORMAT_DATE)
-    nac_row["End Date"] = nac_end_date.strftime(FORMAT_DATE)
-    nac_row["MACH Pts"] = str(nac_points)
-    return nac_row
+    nac_run = dict()
+    nac_run["Result"] = "Q"  # Required for Table CSS and filtering
+    nac_run["NAC Year"] = str(year)
+    nac_run["Start Date"] = nac_start_date.strftime(FORMAT_DATE)
+    nac_run["End Date"] = nac_end_date.strftime(FORMAT_DATE)
+    nac_run["MACH Pts"] = str(nac_points)
+    return nac_run
 
-# Convert a pretty column name to its clean CSS class name
+# Convert a column name to its clean CSS class name
 def col_css_class(c):
     return 'col-' + c.lower().replace(' ','-')
 
-# Convert a pretty row name to its claen CSS class name
+# Convert a row name to its clean CSS class name
 def row_css_class(r):
     return 'row-' + r.lower().replace(' ','-')
     
@@ -430,12 +430,12 @@ def table_header(w, dog, group, cols):
     w.write('  </thead>\n')
 
 # Write a single table row to the HTML output file
-def table_row(w, dog, group, cols, row):
-    # table body rows
-    css_class = 'class="' + row_css_class(row.get("Result")) +'"' if row.get("Result") else ''
+def table_row(w, dog, group, cols, run):
+    # table body runs
+    css_class = 'class="' + row_css_class(run.get("Result")) +'"' if run.get("Result") else ''
     w.write('  <tr ' + css_class + '>\n')
     for c in cols:
-        w.write('    <td class="' + col_css_class(c) +'" >' + str(row.get(c, '')) + '</td>\n')
+        w.write('    <td class="' + col_css_class(c) +'" >' + str(run.get(c, '')) + '</td>\n')
     w.write('  </tr>\n')
 
 # Write an table close to the HTML output file
@@ -453,7 +453,7 @@ def write_svg_plot(w, svg, col):
 # Create a plot (x-y graph) of the base column and its computed stats columns
 # Uses the date as the x-axis, groups in months
 # plot is converted to SVG and returned as a large python string
-def plot_as_svg(table_rows, base_col):
+def plot_as_svg(table_runs, base_col):
     # create a list of columns to plott together
     plot_cols = [base_col, "Avg "+base_col, "Avg15 "+base_col ]
 
@@ -473,10 +473,10 @@ def plot_as_svg(table_rows, base_col):
     for col in plot_cols:
         xdata = []
         ydata = []
-        for row in table_rows:
-            if col == "Q Rate" or row.get("Result") == "Q":
-                x = datetime.datetime.strptime(row["Date"], FORMAT_DATE)
-                y  = float(row.get(col,0)) if row.get(col) else 0
+        for run in table_runs:
+            if col == "Q Rate" or run.get("Result") == "Q":
+                x = datetime.datetime.strptime(run["Date"], FORMAT_DATE)
+                y  = float(run.get(col,0)) if run.get(col) else 0
                 # do we need to adjust the max y value of the plot?
                 if y > y_max:
                     # round up to next multiple of 5
@@ -512,30 +512,30 @@ def plot_as_svg(table_rows, base_col):
 
 file_metas = []
 # Read the PawPrintTrials CSV file into memory
-(rows, meta) = read_csv(ppt_csv_file, ppt_csv_cols, "PawPrintTrials")
-map_ppt_columns(rows)
+(runs, meta) = read_csv(ppt_csv_file, ppt_csv_cols, "PawPrintTrials")
+map_ppt_columns(runs)
 file_metas.append(meta)
 
 # Read the FeelTheRuch CSV file into memory
-(ftr_rows, meta) = read_csv(ftr_csv_file, ftr_csv_cols, "FeelTheRush")
+(ftr_runs, meta) = read_csv(ftr_csv_file, ftr_csv_cols, "FeelTheRush")
 file_metas.append(meta)
-map_ftr_columns(ftr_rows)
+map_ftr_columns(ftr_runs)
 
-# Merge FTR rows into the PPT rows
-rows.extend(ftr_rows)
-rows.sort(key=lambda r: r['SortDate'])
+# Merge FTR runs into the PPT runs
+runs.extend(ftr_runs)
+runs.sort(key=lambda r: r['SortDate'])
 
 # clean up data
-remove_absences(rows)
-group_level_and_class(rows)
-merge_faults(rows)
+remove_absences(runs)
+group_level_and_class(runs)
+merge_faults(runs)
 
 
 # Get lists of unique dogs and catlog classes into groups
-dogs = group_dogs(rows)
+dogs = group_dogs(runs)
 
 # Calculate and add statistics columns to the data 
-stat_cols = calc_stats(rows, dogs, groups)
+stat_cols = calc_stats(runs, dogs, groups)
 
 # Create the HTML output file
 print('Writing', report_file)
@@ -547,20 +547,20 @@ with open(report_file, 'w') as w:
         section_header(w, dog)
         # create a table for each group (aka agility class)
         for group in groups:
-            table_rows = [row for row in rows if row.get('Dog')==dog and row.get('Group')==group]
+            table_runs = [run for run in runs if run.get('Dog')==dog and run.get('Group')==group]
             # skip empty tables and odd-ball classes
-            if table_rows and (not group == "Other"):
+            if table_runs and (not group == "Other"):
                 # Create the table
                 table_header(w, dog, group, table_cols[group])
-                for row in table_rows:
-                    table_row(w, dog, group, table_cols[group], row)
+                for run in table_runs:
+                    table_row(w, dog, group, table_cols[group], run)
                 table_footer(w)
                 # Create a plot for each stat_col in this table
                 for col in stat_cols:
                     # only show plot if applicable to this group/table
                     if (col in table_cols[group]) or (col == "Q Rate"):
                         print('     Plot:', dog, group, col)
-                        svg = plot_as_svg(table_rows, col)
+                        svg = plot_as_svg(table_runs, col)
                         write_svg_plot(w, svg, col)
                         svg = None # help garbage collect
         # Table of MACH pts for NAC by year
@@ -568,8 +568,8 @@ with open(report_file, 'w') as w:
         nac_cols = ("NAC Year", "Start Date", "End Date", "MACH Pts")
         table_header(w, dog, "NAC Points", nac_cols)
         for year in (2022, 2023, 2024, 2025):
-            row = calc_nac_points(rows, dog, year)
-            table_row(w, dog, "NAC Points", nac_cols, row)
+            run = calc_nac_points(runs, dog, year)
+            table_row(w, dog, "NAC Points", nac_cols, run)
         table_footer(w)
         section_footer(w)
     html_footer(w)
@@ -579,8 +579,8 @@ if True:
     print('DEBUG: Creating list of columns')
 
     cols = []
-    for row in rows:
-        for col in row.keys():
+    for run in runs:
+        for col in run.keys():
             if col not in cols:
                 cols.append(col)
     
@@ -589,8 +589,8 @@ if True:
         html_header(w)
         section_header(w, "Debug")
         table_header(w, "Debug", "dump", cols)
-        for row in rows:
-            table_row(w, dog, group, cols, row)
+        for run in runs:
+            table_row(w, dog, group, cols, run)
         table_footer(w)
         section_footer(w)
         html_footer(w)
