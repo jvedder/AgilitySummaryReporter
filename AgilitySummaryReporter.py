@@ -1,10 +1,10 @@
-# Paw Print Trials Report formater
+# Dog Agility Trial Summary Reporter
 # Copyright (c) 2023 John Vedder.  MIT License
-#
-# Formats the results CSV file downloaded from PawPrintTrials.com into a
-# single file HTML report organized by dog and agility class.
-# Running averages are computed and plotted for select columns.
-#
+# 
+# Formats the dog agility results data downloaded from PawPrintTrials.com (PPT)
+# and FeelTheRushTrials.com (FTR) into a unified HTML report. The source is a
+# CSV file from each site. The report includes running averages and graphs
+# for select columns.
 
 import csv
 import statistics
@@ -16,11 +16,11 @@ import datetime
 import io
 import os
 
-# input & output files to use as parameters
-ppt_csv_file    = 'PawPrint Trials Results.csv'
-ftr_csv_file    = 'My Results.csv'
+# Input & output files to use as parameters
+ppt_csv_file = 'PawPrint Trials Results.csv'
+ftr_csv_file = 'My Results.csv'
 report_file = 'report.html'
-debug_file  = 'dump.html'
+debug_file = 'dump.html'
 
 # List of columns in the 'PawPrintTrials' source CSV files. This needs to be updated if the CSV format changes.
 ppt_csv_cols = ["Date","Trial","Location","Dog","Handler","Class","Judge","Yards","SCT","Time","YPS","R","S","W","T","F","E","Score","Result","Place","MACH Pts","T2B Pts","Top25","Run ID"]
@@ -86,7 +86,6 @@ col_css = {
 
 nac_cutoff_day = 1
 nac_cutoff_month = 12
-
 
 # Global default delimiter for CSV reader.
 # TODO: I'm not sure it's necessary
