@@ -21,6 +21,10 @@ ppt_csv_file = 'PawPrint Trials Results.csv'
 ftr_csv_file = 'My Results.csv'
 report_file = 'report.html'
 debug_file = 'dump.html'
+debug_file_ppt = 'dump-ppt.html'
+debug_file_ftr = 'dump-ftr.html'
+CREATE_DEBUG_FILES = True
+
 
 # List of columns in the 'PawPrintTrials' source CSV files. This needs to be updated if the CSV format changes.
 ppt_csv_cols = ["Date","Trial","Location","Dog","Handler","Class","Judge","Yards","SCT","Time","YPS","R","S","W","T","F","E","Score","Result","Place","MACH Pts","T2B Pts","Top25","Run ID"]
@@ -117,6 +121,7 @@ def read_csv(file, csv_cols, source):
             # Convert each CSV row to dict with column names as key
             if len(row) > 5:
                 run = dict()
+                # mark the source of this run
                 run['Source'] = source
                 index = 0
                 for c in csv_cols:
@@ -171,8 +176,6 @@ def get_class(text):
 # Maps PawPrintTrials column names into the preferred names
 def map_ppt_columns(runs):
     for run in runs:
-        # mark the data source
-        run['Source'] = 'PawPrint'
         # the 'Trial' field is actually the Club Name
         run['Club'] = run.get('Trial','')
         # 2 trials on same day are marked #1 and #2 in the 'Class' field
@@ -188,8 +191,6 @@ def map_ppt_columns(runs):
 # Maps FeelTheRushTrials column names into the preferred names
 def map_ftr_columns(runs):
     for run in runs:
-        # mark the data source
-        run['Source'] = 'FeelTheRush'
         # use 'Dog', not 'Dogname'
         run['Dog'] = remove_html_tags(run.get('Dogname',''))
         # Use 'Date', not 'Trial Date'
@@ -431,9 +432,10 @@ def write_table_header(w, dog, group, cols):
     w.write('  </thead>\n')
 
 # Write a single table row to the HTML output file
-def write_table_row(w, dog, group, cols, run):
+def write_table_row(w, cols, run):
     # table body rows
-    css_class = 'class="' + row_css_class(run.get("Result")) +'"' if run.get("Result") else ''
+    result = run.get("Result","")
+    css_class = 'class="' + row_css_class(result) +'"' if result else ''
     w.write('  <tr ' + css_class + '>\n')
     for c in cols:
         w.write('    <td class="' + col_css_class(c) +'" >' + str(run.get(c, '')) + '</td>\n')
@@ -506,6 +508,26 @@ def create_plot_as_svg(table_runs, base_col):
     plt.close('all')
     return svg
 
+def dump_data(file, runs, name):
+    print('DEBUG: Writing', file)
+ 
+    # compile a list of columns across all runs (in original order)
+    cols = []
+    for run in runs:
+        for col in run.keys():
+            if col not in cols:
+                cols.append(col)
+   
+    # write all runs to the file
+    with open(file, 'w') as w:
+        write_html_header(w)
+        write_section_header(w, name)
+        write_table_header(w, name, "Data Dump", cols)
+        for run in runs:
+            write_table_row(w, cols, run)
+        write_table_footer(w)
+        write_section_footer(w)
+        write_html_footer(w)    
 
 # # 
 # # Main execution starts here
@@ -513,14 +535,18 @@ def create_plot_as_svg(table_runs, base_col):
 
 file_metas = []
 # Read the PawPrintTrials CSV file into memory
-(runs, meta) = read_csv(ppt_csv_file, ppt_csv_cols, "PawPrintTrials")
+(runs, meta) = read_csv(ppt_csv_file, ppt_csv_cols, "PawPrint")
 map_ppt_columns(runs)
 file_metas.append(meta)
+
+if CREATE_DEBUG_FILES: dump_data(debug_file_ppt, runs, "Paw Print Trials")
 
 # Read the FeelTheRuch CSV file into memory
 (ftr_runs, meta) = read_csv(ftr_csv_file, ftr_csv_cols, "FeelTheRush")
 file_metas.append(meta)
 map_ftr_columns(ftr_runs)
+
+if CREATE_DEBUG_FILES: dump_data(debug_file_ftr, ftr_runs, "Feel The Rush")
 
 # Merge FTR runs into the PPT runs
 runs.extend(ftr_runs)
@@ -554,7 +580,7 @@ with open(report_file, 'w') as w:
                 # Create the table
                 write_table_header(w, dog, group, table_cols[group])
                 for run in table_runs:
-                    write_table_row(w, dog, group, table_cols[group], run)
+                    write_table_row(w, table_cols[group], run)
                 write_table_footer(w)
                 # Create a plot for each stat_col in this table
                 for col in stat_cols:
@@ -570,31 +596,13 @@ with open(report_file, 'w') as w:
         write_table_header(w, dog, "NAC Points", nac_cols)
         for year in (2022, 2023, 2024, 2025):
             run = calc_nac_points(runs, dog, year)
-            write_table_row(w, dog, "NAC Points", nac_cols, run)
+            write_table_row(w, nac_cols, run)
         write_table_footer(w)
         write_section_footer(w)
     write_html_footer(w)
 
 # optionally create the debug file with all data in one giant table
-if True:
-    print('DEBUG: Creating list of columns')
-
-    cols = []
-    for run in runs:
-        for col in run.keys():
-            if col not in cols:
-                cols.append(col)
-    
-    print('DEBUG: Writing', debug_file)
-    with open(debug_file, 'w') as w:
-        write_html_header(w)
-        write_section_header(w, "Debug")
-        write_table_header(w, "Debug", "dump", cols)
-        for run in runs:
-            write_table_row(w, dog, group, cols, run)
-        write_table_footer(w)
-        write_section_footer(w)
-        write_html_footer(w)
+if CREATE_DEBUG_FILES: dump_data(debug_file, runs, "Dump of All Data")
 
 # Let the user know this script came to completion
 print('Done.')
