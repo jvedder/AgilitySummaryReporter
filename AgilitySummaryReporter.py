@@ -337,7 +337,7 @@ def row_css_class(r):
     return 'row-' + r.lower().replace(' ','-')
     
 # Write the header (including CSS) and main body start to the HTML output file
-def html_header(w):
+def write_html_header(w):
     # html header
     w.write('<!DOCTYPE html>')
     w.write('<html>\n')
@@ -376,12 +376,12 @@ def html_header(w):
     w.write('<body>\n')
 
 # Write the main body close to the HTML output file
-def html_footer(w):
+def write_html_footer(w):
     w.write('</body>\n')
     w.write('</html>\n')
 
 # Write a table of file meta data
-def file_table(file_metas):
+def write_file_table(file_metas):
     print('  Source File Table')
     cols = ['Source','Filename','Run Count','File Date','Last Run Date']
     now = datetime.datetime.now().strftime(FORMAT_DATE_TIME)
@@ -406,17 +406,17 @@ def file_table(file_metas):
     w.write('</table>\n')
 
 # Write a new section start to the HTML output file
-def section_header(w, dog):
+def write_section_header(w, dog):
     print('  Section:', dog)
     w.write('<section>')
     w.write('<h1>' + dog + '</h1>\n')
 
 # Write a section close to the HTML output file
-def section_footer(w):
+def write_section_footer(w):
     w.write('</section>')
 
 # Write a new table start to the HTML output file
-def table_header(w, dog, group, cols):
+def write_table_header(w, dog, group, cols):
     print('    Table:', dog, group)
     # table heading row
     w.write('<h2>' + dog + ' &ndash; ' + group + '</h2>\n')  
@@ -430,8 +430,8 @@ def table_header(w, dog, group, cols):
     w.write('  </thead>\n')
 
 # Write a single table row to the HTML output file
-def table_row(w, dog, group, cols, run):
-    # table body runs
+def write_table_row(w, dog, group, cols, run):
+    # table body rows
     css_class = 'class="' + row_css_class(run.get("Result")) +'"' if run.get("Result") else ''
     w.write('  <tr ' + css_class + '>\n')
     for c in cols:
@@ -439,7 +439,7 @@ def table_row(w, dog, group, cols, run):
     w.write('  </tr>\n')
 
 # Write an table close to the HTML output file
-def table_footer(w):       
+def write_table_footer(w):
     w.write('</table>\n')
     w.write('</div>\n')
 
@@ -453,7 +453,7 @@ def write_svg_plot(w, svg, col):
 # Create a plot (x-y graph) of the base column and its computed stats columns
 # Uses the date as the x-axis, groups in months
 # plot is converted to SVG and returned as a large python string
-def plot_as_svg(table_runs, base_col):
+def create_plot_as_svg(table_runs, base_col):
     # create a list of columns to plott together
     plot_cols = [base_col, "Avg "+base_col, "Avg15 "+base_col ]
 
@@ -540,39 +540,39 @@ stat_cols = calc_stats(runs, dogs, groups)
 # Create the HTML output file
 print('Writing', report_file)
 with open(report_file, 'w') as w:
-    html_header(w)
-    file_table(file_metas)
+    write_html_header(w)
+    write_file_table(file_metas)
     # each dog gets its own section
     for dog in dogs:
-        section_header(w, dog)
+        write_section_header(w, dog)
         # create a table for each group (aka agility class)
         for group in groups:
             table_runs = [run for run in runs if run.get('Dog')==dog and run.get('Group')==group]
             # skip empty tables and odd-ball classes
             if table_runs and (not group == "Other"):
                 # Create the table
-                table_header(w, dog, group, table_cols[group])
+                write_table_header(w, dog, group, table_cols[group])
                 for run in table_runs:
-                    table_row(w, dog, group, table_cols[group], run)
-                table_footer(w)
+                    write_table_row(w, dog, group, table_cols[group], run)
+                write_table_footer(w)
                 # Create a plot for each stat_col in this table
                 for col in stat_cols:
                     # only show plot if applicable to this group/table
                     if (col in table_cols[group]) or (col == "Q Rate"):
                         print('     Plot:', dog, group, col)
-                        svg = plot_as_svg(table_runs, col)
+                        svg = create_plot_as_svg(table_runs, col)
                         write_svg_plot(w, svg, col)
                         svg = None # help garbage collect
         # Table of MACH pts for NAC by year
         # TODO: Fixed hard-coded years
         nac_cols = ("NAC Year", "Start Date", "End Date", "MACH Pts")
-        table_header(w, dog, "NAC Points", nac_cols)
+        write_table_header(w, dog, "NAC Points", nac_cols)
         for year in (2022, 2023, 2024, 2025):
             run = calc_nac_points(runs, dog, year)
-            table_row(w, dog, "NAC Points", nac_cols, run)
-        table_footer(w)
-        section_footer(w)
-    html_footer(w)
+            write_table_row(w, dog, "NAC Points", nac_cols, run)
+        write_table_footer(w)
+        write_section_footer(w)
+    write_html_footer(w)
 
 # optionally create the debug file with all data in one giant table
 if True:
@@ -586,14 +586,14 @@ if True:
     
     print('DEBUG: Writing', debug_file)
     with open(debug_file, 'w') as w:
-        html_header(w)
-        section_header(w, "Debug")
-        table_header(w, "Debug", "dump", cols)
+        write_html_header(w)
+        write_section_header(w, "Debug")
+        write_table_header(w, "Debug", "dump", cols)
         for run in runs:
-            table_row(w, dog, group, cols, run)
-        table_footer(w)
-        section_footer(w)
-        html_footer(w)
+            write_table_row(w, dog, group, cols, run)
+        write_table_footer(w)
+        write_section_footer(w)
+        write_html_footer(w)
 
 # Let the user know this script came to completion
 print('Done.')
