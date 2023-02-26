@@ -30,13 +30,13 @@ ftr_csv_cols = ["Dogname","Trial Date","Club","Trial Day","Judge","Level","Class
 
 # List of columns to include for for each table that is output
 table_cols = {
-    "Master Std":   ["Date","Source","Club","Location","Judge","Yards","SCT","Time","YPS","Avg YPS","Avg15 YPS","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","MACH Pts","Avg MACH Pts","Avg15 MACH Pts"],
-    "Master JWW":   ["Date","Source","Club","Location","Judge","Yards","SCT","Time","YPS","Avg YPS","Avg15 YPS","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","MACH Pts","Avg MACH Pts","Avg15 MACH Pts"],
-    "Premier Std":  ["Date","Source","Club","Location","Judge","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","Top25"],
-    "Premier JWW":  ["Date","Source","Club","Location","Judge","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","Top25"],
-    "Master FAST":  ["Date","Source","Club","Location","Judge","Faults","Score","Avg Score","Avg15 Score","Result","Avg Q Rate","Avg15 Q Rate","Place"],
-    "T2B" :         ["Date","Source","Club","Location","Judge","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","T2B Pts","Avg T2B Pts","Avg15 T2B Pts"],
-    "Other" :       ["Date","Source","Club","Location","Class","Judge","Yards","SCT","Time","YPS","Avg YPS","Avg15 YPS","Faults","Score","Avg Score","Avg15 Score","Result","Avg Q Rate","Avg15 Q Rate","Place","MACH Pts","Avg MACH Pts","Avg15 MACH Pts","T2B Pts","Avg T2B Pts","Avg15 T2B Pts","Top25"],
+    "Master Std":   ["Date","Source","Club","Location","Judge","Trial Num","Yards","SCT","Time","YPS","Avg YPS","Avg15 YPS","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","MACH Pts","Avg MACH Pts","Avg15 MACH Pts"],
+    "Master JWW":   ["Date","Source","Club","Location","Judge","Trial Num","Yards","SCT","Time","YPS","Avg YPS","Avg15 YPS","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","MACH Pts","Avg MACH Pts","Avg15 MACH Pts"],
+    "Premier Std":  ["Date","Source","Club","Location","Judge","Trial Num","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","Top25"],
+    "Premier JWW":  ["Date","Source","Club","Location","Judge","Trial Num","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","Top25"],
+    "Master FAST":  ["Date","Source","Club","Location","Judge","Trial Num","Faults","Score","Avg Score","Avg15 Score","Result","Avg Q Rate","Avg15 Q Rate","Place"],
+    "T2B" :         ["Date","Source","Club","Location","Judge","Trial Num","Faults","Result","Avg Q Rate","Avg15 Q Rate","Place","T2B Pts","Avg T2B Pts","Avg15 T2B Pts"],
+    "Other" :       ["Date","Source","Club","Location","Class","Trial Num","Judge","Yards","SCT","Time","YPS","Avg YPS","Avg15 YPS","Faults","Score","Avg Score","Avg15 Score","Result","Avg Q Rate","Avg15 Q Rate","Place","MACH Pts","Avg MACH Pts","Avg15 MACH Pts","T2B Pts","Avg T2B Pts","Avg15 T2B Pts","Top25"],
 }
 
 # Standard list of class names (called groups because class is a reserved word)
@@ -51,6 +51,7 @@ col_css = {
     "Trial":        ["236px", "left"],
     "Club":         ["236px", "left"],
     "Location":     ["217px", "left"],
+    "Trial Num":    ["60px","center"],
     "Dog":          ["35px", "left"],
     "Handler":      ["100px", "left"],
     "Class":        ["130px", "left"],
@@ -176,7 +177,7 @@ def map_ppt_columns(runs):
         run['Club'] = run.get('Trial','')
         # 2 trials on same day are marked #1 and #2 in the 'Class' field
         # single trial on a day has neither #1 or #2, so default to #1
-        run['TrialNum'] = '2' if '#2' in run.get('Class','') else '1'
+        run['Trial Num'] = '2' if '#2' in run.get('Class','') else '1'
         # Define level & class by their simple name.
         # PPT 'Class' includes both the level and class
         ppt_class = run.get('Class','')
@@ -194,7 +195,7 @@ def map_ftr_columns(runs):
         # Use 'Date', not 'Trial Date'
         run['Date'] = run.get('Trial Date', DEFAULT_DATE)
         # for 2 for trials on same day
-        run['TrialNum'] = run.get('Trial Day','1')
+        run['Trial Num'] = run.get('Trial Day','1')
         # use 'Results', not 'Qual', for Q and NQ
         run['Result'] = run.get('Qual','')
         # map the 'Points' field to 'MACH Pts', 'Score' and 'T2B Pts" based on class
